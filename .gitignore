@@ -1,0 +1,12 @@
+# Wynik builda – Cloudflare Pages generuje go sam (node build.mjs -> dist)
+dist/
+
+# Lokalne ustawienia edytora / Claude
+.claude/
+.vscode/
+node_modules/
+
+# Pliki robocze z Blendera (duże, nieużywane przez stronę)
+*.blend
+*.blend1
+render_*.png
