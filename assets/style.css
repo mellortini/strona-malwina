@@ -5,7 +5,9 @@
   --f-head:'Sora',system-ui,sans-serif; --f-body:'Inter',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0}
-html{scroll-behavior:smooth;scroll-padding-top:84px}
+/* deklarujemy własne kolory dla trybu jasnego i ciemnego – telefon nie "przyciemnia" strony na siłę (Samsung Internet, Chrome Auto Dark) */
+:root{color-scheme:light dark}
+html{scroll-behavior:smooth;scroll-padding-top:84px;background:var(--bg)}
 body{font-family:var(--f-body);color:var(--ink);background:var(--bg);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
@@ -74,11 +76,11 @@ h1 em{font-style:normal;color:var(--orange)}
 .scene::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(7,19,34,.75) 0%,rgba(7,19,34,.35) 45%,transparent 70%);pointer-events:none}
 .stars{position:absolute;inset:0 0 40%;opacity:.7;
   background-image:radial-gradient(1.5px 1.5px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 28% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 47% 30%,#fff,transparent),radial-gradient(1px 1px at 63% 9%,#fff,transparent),radial-gradient(1.2px 1.2px at 78% 26%,#fff,transparent),radial-gradient(1px 1px at 91% 15%,#fff,transparent),radial-gradient(1px 1px at 6% 40%,#fff,transparent),radial-gradient(1px 1px at 55% 45%,#fff,transparent),radial-gradient(1.3px 1.3px at 85% 42%,#fff,transparent)}
-.layer{position:absolute;left:0;right:0;background-repeat:repeat-x;background-size:auto 100%;background-position:0 100%}
+.layer{position:absolute;left:0;width:calc(100% + 4000px);background-repeat:repeat-x;background-size:auto 100%;background-position:0 100%;will-change:transform}
 .far{bottom:var(--road);height:38%}
 .mid{bottom:var(--road);height:26%}
 .road{position:absolute;inset:auto 0 0;height:var(--road);background:linear-gradient(#232c37,#151b23);border-top:3px solid #3a4553}
-.lane{position:absolute;left:0;right:0;top:46%;height:5px;will-change:background-position;
+.lane{position:absolute;left:0;width:calc(100% + 200px);top:46%;height:5px;will-change:transform;
   background:repeating-linear-gradient(90deg,rgba(233,237,242,.75) 0 56px,transparent 56px 200px)}
 .truck{position:absolute;left:0;bottom:calc(var(--road) * .3);width:var(--truck-w);z-index:1;will-change:transform}
 .truck-svg{width:100%;height:auto;overflow:visible;display:block}
@@ -293,3 +295,11 @@ blockquote{margin:1.6rem 0;padding:1rem 0 1rem 1.3rem;border-left:3px solid var(
   .price th{font-size:.84rem}
   .cta-row .btn{width:100%;justify-content:center}
 }
+
+/* Telefon/tablet: bez rozmycia tła pod menu i statystykami (kosztowne przy animacji) */
+@media (max-width:940px){
+  .nav.solid,.nav.open{backdrop-filter:none;background:rgba(11,27,46,.97)}
+  .stats{backdrop-filter:none;background:#1b222c}
+}
+/* Pola formularza – zawsze jasne, niezależnie od trybu systemu */
+.form input:not([type=checkbox]),.form textarea{color:var(--ink)}

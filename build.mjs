@@ -249,6 +249,7 @@ function render(lang) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>${esc(t.meta.title)}</title>
 <meta name="description" content="${esc(t.meta.desc)}">
 <meta property="og:title" content="${esc(t.meta.title)}">

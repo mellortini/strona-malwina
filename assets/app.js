@@ -38,6 +38,16 @@
     let p = 0, X = 0, shownX = 0, t0 = performance.now(), visible = true;
     let mode = 1, anchorP = 0, anchorX = 0, upDist = 0; // mode: 1 = w dół, -1 = w górę
     const mod = (a, n) => ((a % n) + n) % n;
+    // szerokość jednego kafla tła w px (SVG 3000x220 i 3000x160 skalowane do wysokości warstwy)
+    const tiles = { far: 1, mid: 1 };
+    const measure = () => {
+      tiles.far = Math.max(1, far.offsetHeight * 3000 / 220);
+      tiles.mid = Math.max(1, mid.offsetHeight * 3000 / 160);
+      far.style.width = `${Math.ceil(innerWidth + tiles.far)}px`;
+      mid.style.width = `${Math.ceil(innerWidth + tiles.mid)}px`;
+    };
+    measure();
+    addEventListener('resize', measure);
     const geom = () => {
       const vw = innerWidth, W = truck.offsetWidth || 1;
       return { vw, W, span: vw + W, startX: vw * (vw > 940 ? 0.5 : 0.03) }; // desktop: start po prawej obok tekstu
@@ -59,9 +69,10 @@
       truck.style.transform = `translate3d(${x.toFixed(1)}px, ${(Math.sin(dist * 0.09) * 0.8).toFixed(2)}px, 0)`;
       const deg = ((dist + x) / (2 * Math.PI * ((24 * W) / 760))) * 360;
       spins.forEach((s) => s.setAttribute('transform', `rotate(${(deg % 360).toFixed(1)})`));
-      far.style.backgroundPosition = `${(-dist * 0.08).toFixed(1)}px 100%`;
-      mid.style.backgroundPosition = `${(-dist * 0.35).toFixed(1)}px 100%`;
-      lane.style.backgroundPosition = `${(-dist).toFixed(0)}px 0`;
+      // przesuw przez transform (GPU) zamiast background-position (przemalowanie co klatkę)
+      far.style.transform = `translate3d(${(-(dist * 0.08) % tiles.far).toFixed(1)}px,0,0)`;
+      mid.style.transform = `translate3d(${(-(dist * 0.35) % tiles.mid).toFixed(1)}px,0,0)`;
+      lane.style.transform = `translate3d(${(-dist % 200).toFixed(1)}px,0,0)`;
       requestAnimationFrame(frame);
     };
     const onScroll = () => {
