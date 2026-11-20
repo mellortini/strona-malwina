@@ -14,7 +14,12 @@ node build.mjs
 node serve.mjs        # http://localhost:5174  (lub PORT=5175 node serve.mjs)
 ```
 
-## Cloudflare Pages
+## Cloudflare Workers (statyczne assets, konfiguracja w `wrangler.jsonc`)
+
+- Build command: `node build.mjs`
+- Deploy command: `npx wrangler deploy`
+
+## Cloudflare Pages (alternatywnie)
 
 - Framework preset: **None**
 - Build command: `node build.mjs`

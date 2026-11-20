@@ -1,0 +1,8 @@
+// Cloudflare Workers – statyczna strona z folderu dist (budowany przez: node build.mjs)
+{
+  "name": "strona-malwina",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
