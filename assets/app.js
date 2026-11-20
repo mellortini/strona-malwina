@@ -33,16 +33,29 @@
     const spins = $$('.spin', scene);
     const IDLE = 90;   // px/s – prędkość "jazdy" bez przewijania
     const PUSH = 1.25; // ile szerokości ekranu przejedzie tir przy przewinięciu całego hero
-    let p = 0, shown = 0, t0 = performance.now(), visible = true;
+    // Tir jedzie zawsze do przodu (w prawo), a na samej górze strony zawsze stoi w pozycji startowej.
+    // X = pozycja "rozwinięta" (rośnie bez końca); na ekranie zawijana: za prawą krawędzią -> zza lewej.
+    let p = 0, X = 0, shownX = 0, t0 = performance.now(), visible = true;
+    let mode = 1, anchorP = 0, anchorX = 0, upDist = 0; // mode: 1 = w dół, -1 = w górę
+    const mod = (a, n) => ((a % n) + n) % n;
+    const geom = () => {
+      const vw = innerWidth, W = truck.offsetWidth || 1;
+      return { vw, W, span: vw + W, startX: vw * (vw > 940 ? 0.5 : 0.03) }; // desktop: start po prawej obok tekstu
+    };
+    const targetX = (np) => {
+      const { vw, span, startX } = geom();
+      if (mode === 1) return anchorX + (np - anchorP) * PUSH * vw;
+      // w górę: dojedź do przodu dokładnie do pozycji startowej, gdy np = 0
+      return anchorX + ((anchorP - np) / anchorP) * upDist;
+    };
 
     const frame = (now) => {
       if (!visible) return;
-      const vw = innerWidth, W = truck.offsetWidth;
-      if (!W) { requestAnimationFrame(frame); return; } // jeszcze nie wyrenderowana – unikamy dzielenia przez 0
-      shown += (p - shown) * 0.12; // płynne doganianie pozycji przewijania
-      const start = vw > 940 ? 0.5 : 0.03; // desktop: start po prawej obok tekstu
-      const x = vw * start + shown * PUSH * vw;
-      const dist = ((now - t0) / 1000) * IDLE + shown * 2200;
+      const { W, span } = geom();
+      if (W <= 1) { requestAnimationFrame(frame); return; } // jeszcze nie wyrenderowana
+      shownX += (X - shownX) * 0.12; // płynne doganianie
+      const x = mod(shownX + W, span) - W;
+      const dist = ((now - t0) / 1000) * IDLE + shownX * 0.28; // wolniej przy przewijaniu = brak migotania pasów
       truck.style.transform = `translate3d(${x.toFixed(1)}px, ${(Math.sin(dist * 0.09) * 0.8).toFixed(2)}px, 0)`;
       const deg = ((dist + x) / (2 * Math.PI * ((24 * W) / 760))) * 360;
       spins.forEach((s) => s.setAttribute('transform', `rotate(${(deg % 360).toFixed(1)})`));
@@ -51,13 +64,30 @@
       lane.style.backgroundPosition = `${(-dist).toFixed(0)}px 0`;
       requestAnimationFrame(frame);
     };
-    const onScroll = () => { p = Math.min(1, Math.max(0, scrollY / hero.offsetHeight)); };
+    const onScroll = () => {
+      const np = Math.min(1, Math.max(0, scrollY / hero.offsetHeight));
+      if (np === p) return;
+      const dir = np > p ? 1 : -1;
+      if (dir !== mode) {
+        // zmiana kierunku przewijania: nowy punkt odniesienia
+        mode = dir; anchorP = p; anchorX = X;
+        if (mode === -1) {
+          const { span, startX } = geom();
+          upDist = mod(startX - anchorX, span);
+          if (upDist < span * 0.25) upDist += span; // za blisko – zrób pełne okrążenie, by nie pełzał
+        }
+      }
+      X = targetX(np);
+      if (np === 0) { X = anchorX + (mode === -1 ? upDist : 0); mode = 1; anchorP = 0; anchorX = X; } // góra = start
+      p = np;
+    };
 
     if (reduce) {
       truck.style.transform = `translateX(${innerWidth * (innerWidth > 940 ? 0.5 : 0.1)}px)`;
     } else {
-      onScroll();
-      shown = p;
+      p = Math.min(1, Math.max(0, scrollY / hero.offsetHeight));
+      anchorX = geom().startX; anchorP = 0;
+      X = shownX = anchorX + p * PUSH * innerWidth;
       addEventListener('scroll', onScroll, { passive: true });
       new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) requestAnimationFrame(frame); }).observe(hero);
       requestAnimationFrame(frame);

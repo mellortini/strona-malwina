@@ -1,6 +1,7 @@
 // Generator statycznej strony: node build.mjs  ->  dist/ (pl w katalogu głównym, /en/, /de/)
 import { mkdirSync, writeFileSync, cpSync, rmSync } from 'node:fs';
 import { T, media, contact, fleet, countries, pricing, refsAlt, certs, letters, extra } from './content.mjs';
+const VER = Date.now().toString(36); // wersja plików – omija stary cache przeglądarki
 const YEARS = new Date().getFullYear() - 2011; // lata na rynku – liczone automatycznie
 
 const LANGS = ['pl', 'en', 'de'];
@@ -46,33 +47,50 @@ function rng(seed) {
 }
 // Warstwy tła jako powtarzalne (bezszwowe) obrazki SVG w CSS
 const bg = (svg) => `background-image:url(&quot;data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, '%27')}&quot;)`;
-// Daleka panorama miasta (okna świecą)
-function skyline() {
-  const r = rng(7);
-  let x = 10, out = '';
-  for (;;) {
-    const w = 40 + r() * 90, h = 40 + r() * 150;
-    if (x + w > 2990) break;
-    out += `<rect x="${x.toFixed(0)}" y="${(220 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="#10263f"/>`;
-    for (let wy = 220 - h + 12; wy < 210; wy += 16)
-      for (let wx = x + 8; wx < x + w - 8; wx += 14)
-        if (r() > 0.78) out += `<rect x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="5" height="7" fill="#ffcf7a" opacity=".55"/>`;
-    x += w + 6 + r() * 60;
+// Pagórki low poly: grzbiet z losowych punktów + trójkątne fasety, bezszwowo powtarzalne (szer. 3000)
+// pal = [jasny, średni, ciemny, najciemniejszy]
+function lowPolyHills({ seed, h, minY, maxY, step, pal, lights = 0 }) {
+  const r = rng(seed), W = 3000, pts = [];
+  for (let x = 0; x < W - step * 0.6; x += step * (0.7 + r() * 0.6)) pts.push([x, minY + r() * (maxY - minY)]);
+  pts.push([W, pts[0][1]]); // ta sama wysokość na obu krawędziach = brak szwu
+  const mid = [], n = pts.length;
+  for (let i = 0; i < n - 1; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const ridge = Math.max(y1, y2);
+    mid.push([(x1 + x2) / 2 + (r() - 0.5) * step * 0.3, ridge + (h - ridge) * (0.35 + r() * 0.25)]);
   }
-  return bg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3000 220" width="3000" height="220">${out}</svg>`);
+  const P = (p) => `${p[0].toFixed(0)},${p[1].toFixed(0)}`;
+  const tri = (a, b, c, col) => `<polygon points="${P(a)} ${P(b)} ${P(c)}" fill="${col}" stroke="${col}" stroke-width="1"/>`;
+  const pick = (i, j) => pal[Math.min(pal.length - 1, i + (r() > 0.5 ? j : 0))];
+  let out = `<rect x="0" y="${Math.max(minY, maxY) - 1}" width="${W}" height="${h}" fill="${pal[3]}"/>`;
+  // światło z lewej: zbocza opadające w prawo jaśniejsze
+  for (let i = 0; i < n - 1; i++) {
+    const A = pts[i], B = pts[i + 1], M = mid[i];
+    out += tri(A, B, M, B[1] > A[1] ? pick(0, 1) : pick(1, 1));
+    if (i < n - 2) out += tri(M, B, mid[i + 1], pick(1, 1));
+    const Mb = [M[0], h];
+    out += tri(A, M, [A[0], h], pick(2, 1)) + tri(A, [A[0], h], Mb, pal[3]);
+    out += tri(M, B, [B[0], h], pick(2, 1)) + tri(M, [B[0], h], Mb, pick(2, 1));
+  }
+  for (let k = 0; k < lights; k++) {
+    const i = Math.floor(r() * (n - 1)), M = mid[i];
+    out += `<circle cx="${(M[0] + (r() - 0.5) * 40).toFixed(0)}" cy="${(M[1] + 6 + r() * 14).toFixed(0)}" r="1.8" fill="#ffd38a" opacity=".85"/>`;
+  }
+  return out;
 }
-// Bliższy plan: drzewa i latarnie
-function roadside() {
-  const r = rng(42);
-  let out = '';
-  for (let x = 40; x < 2960; x += 70 + r() * 110) {
-    if (r() > 0.35) {
-      const s = 0.7 + r() * 0.6;
-      out += `<g transform="translate(${x.toFixed(0)} 160) scale(${s.toFixed(2)})"><rect x="-3" y="-30" width="6" height="30" fill="#0a1a2b"/><path d="M0-95L28-25H-28Z" fill="#0d2236"/></g>`;
-    }
-  }
-  for (let x = 120; x < 2960; x += 380)
-    out += `<g transform="translate(${x} 160)"><rect x="-2" y="-120" width="4" height="120" fill="#0a1a2b"/><path d="M0-120H22" stroke="#0a1a2b" stroke-width="3"/><circle cx="24" cy="-117" r="26" fill="#ffd27a" opacity=".12"/><circle cx="24" cy="-117" r="5" fill="#ffe3a3"/></g>`;
+// Daleki plan: wyższe, bledsze pagórki (nocą światełka wiosek)
+function skyline(day = false) {
+  const pal = day ? ['#a9c9c4', '#93b8b3', '#7fa6a3', '#6d9592'] : ['#21405f', '#1b3754', '#162f49', '#122840'];
+  const hills = lowPolyHills({ seed: 7, h: 220, minY: 40, maxY: 140, step: 230, pal, lights: day ? 0 : 26 });
+  return bg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3000 220" width="3000" height="220">${hills}</svg>`);
+}
+// Bliższy plan: niższe, ciemniejsze pagórki + latarnie przy drodze
+function roadside(day = false) {
+  const pal = day ? ['#79b26d', '#5f9d5b', '#4a8a4c', '#3c7841'] : ['#14304a', '#10283f', '#0c2135', '#0a1b2c'];
+  const pole = day ? '#6b7682' : '#0a1a2b', lamp = day ? '#d5dbe1' : '#ffe3a3';
+  let out = lowPolyHills({ seed: 42, h: 160, minY: 50, maxY: 120, step: 170, pal });
+  for (let x = 120; x < 3000; x += 375)
+    out += `<g transform="translate(${x} 160)"><rect x="-2" y="-120" width="4" height="120" fill="${pole}"/><path d="M0-120H22" stroke="${pole}" stroke-width="3"/>${day ? '' : '<circle cx="24" cy="-117" r="26" fill="#ffd27a" opacity=".12"/>'}<circle cx="24" cy="-117" r="5" fill="${lamp}"/></g>`;
   return bg(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3000 160" width="3000" height="160">${out}</svg>`);
 }
 function truckSvg() {
@@ -242,7 +260,7 @@ ${hreflang}
 <link rel="icon" href="${media.logo}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="${A}style.css">
+<link rel="stylesheet" href="${A}style.css?v=${VER}">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body>
@@ -429,7 +447,7 @@ ${hreflang}
   <div class="wrap eu" id="eu"><img src="${media.eu}" alt="${x.eu.h}" loading="lazy"><div><b>${x.eu.h}</b><p>${x.eu.text}</p></div></div>
   <div class="wrap foot-b">© 2011–${new Date().getFullYear()} ${x.legal} · ${contact.address}. ${t.footer.rights}</div>
 </footer>
-<script src="${A}app.js" defer></script>
+<script src="${A}app.js?v=${VER}" defer></script>
 </body>
 </html>`;
 }

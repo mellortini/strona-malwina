@@ -79,7 +79,7 @@ h1 em{font-style:normal;color:var(--orange)}
 .mid{bottom:var(--road);height:26%}
 .road{position:absolute;inset:auto 0 0;height:var(--road);background:linear-gradient(#232c37,#151b23);border-top:3px solid #3a4553}
 .lane{position:absolute;left:0;right:0;top:46%;height:5px;will-change:background-position;
-  background:repeating-linear-gradient(90deg,#e9edf2 0 70px,transparent 70px 140px)}
+  background:repeating-linear-gradient(90deg,rgba(233,237,242,.75) 0 56px,transparent 56px 200px)}
 .truck{position:absolute;left:0;bottom:calc(var(--road) * .3);width:var(--truck-w);z-index:1;will-change:transform}
 .truck-svg{width:100%;height:auto;overflow:visible;display:block}
 @media (min-width:941px){
