@@ -61,11 +61,14 @@
 
     const frame = (now) => {
       if (!visible) return;
-      const { W, span } = geom();
+      const { vw, W, span } = geom();
       if (W <= 1) { requestAnimationFrame(frame); return; } // jeszcze nie wyrenderowana
+      // Telefon/tablet: tir stoi na środku i "jedzie w miejscu" (droga i tło płyną).
+      // Przewijanie z bezwładnością i chowający się pasek adresu psuły jazdę sterowaną scrollem.
+      const still = vw <= 940;
       shownX += (X - shownX) * 0.12; // płynne doganianie
-      const x = mod(shownX + W, span) - W;
-      const dist = ((now - t0) / 1000) * IDLE + shownX * 0.28; // wolniej przy przewijaniu = brak migotania pasów
+      const x = still ? (vw - W) / 2 : mod(shownX + W, span) - W;
+      const dist = ((now - t0) / 1000) * (still ? IDLE * 1.6 : IDLE) + (still ? 0 : shownX * 0.28); // wolniej przy przewijaniu = brak migotania pasów
       truck.style.transform = `translate3d(${x.toFixed(1)}px, ${(Math.sin(dist * 0.09) * 0.8).toFixed(2)}px, 0)`;
       const deg = ((dist + x) / (2 * Math.PI * ((24 * W) / 760))) * 360;
       spins.forEach((s) => s.setAttribute('transform', `rotate(${(deg % 360).toFixed(1)})`));
